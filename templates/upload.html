@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传视频 - Home TV</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #1e1e1e;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+            padding: 10px;
+            width: 100%;
+            background: #2c2c2c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3700b3;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:focus, button:hover {
+            background-color: #6200ee;
+            transform: scale(1.02);
+        }
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            color: #bb86fc;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>上传视频</h1>
+        <form action="/api/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="video" accept="video/*" required tabindex="1" id="fileInput">
+            <button type="submit" tabindex="2">开始上传</button>
+        </form>
+        <a href="/" class="back-link" tabindex="3">返回首页</a>
+    </div>
+    <script>
+        document.getElementById('fileInput').focus();
+    </script>
+</body>
+</html>

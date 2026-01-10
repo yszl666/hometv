@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{if .Series}}{{.Series}}{{else}}Home TV{{end}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* TV Adaptation for Index */
+        body {
+            font-size: 16px; /* Base font size */
+        }
+        
+        .video-grid {
+            /* Use auto-fill to fit as many as possible */
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+            gap: 20px;
+            padding: 10px;
+        }
+        
+        .video-card {
+            padding: 10px;
+        }
+        
+        .video-thumbnail {
+            height: 140px;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin: 20px 0 20px 20px;
+            text-align: left;
+        }
+
+        /* Force more columns on larger "virtual" screens (TVs often report 720p or 1080p but scale up) */
+        @media (min-width: 1280px) {
+            .video-grid {
+                grid-template-columns: repeat(6, 1fr) !important;
+            }
+            h1 {
+                font-size: 3rem; /* Restore size on big screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a href="/crawler" class="upload-btn" style="background-color: #03dac6; color: black;" tabindex="2">爬虫</a>
+        <button onclick="refreshSeries()" class="upload-btn" style="background-color: #bb86fc; color: black; border: none; cursor: pointer;" tabindex="3">刷新</button>
+    </div>
+    
+    <h1>
+        {{if .Series}}
+            <a href="/" style="text-decoration:none;color:inherit;">&larr;</a> {{.Series}}
+        {{else}}
+            最新视频
+        {{end}}
+    </h1>
+    
+    <div class="video-grid">
+        {{range .Videos}}
+        <a href="/play?id={{.ID}}" class="video-card" tabindex="0">
+            <div class="video-thumbnail">
+                <video src="{{.Path}}" preload="metadata"></video>
+            </div>
+            <div class="video-info">
+                <h2>{{.Title}}</h2>
+                <p>
+                    <span class="status-badge {{.Status}}" id="status-{{.ID}}">{{.Status}}</span>
+                    {{.CreatedAt.Format "2006-01-02 15:04"}}
+                </p>
+                <div class="progress-container" id="progress-container-{{.ID}}" 
+                     data-downloaded="{{.DownloadedSegments}}" data-total="{{.TotalSegments}}"
+                     style="display: {{if or (eq .Status "downloading") (eq .Status "pending")}}block{{else}}none{{end}};">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-{{.ID}}" style="width: 0%;"></div>
+                    </div>
+                    <span class="progress-text" id="progress-text-{{.ID}}">0%</span>
+                </div>
+                <button onclick="deleteVideo(event, '{{.ID}}')" class="delete-btn">删除</button>
+                {{if eq .Status "error"}}
+                <button onclick="retryVideo(event, '{{.ID}}')" class="delete-btn" style="background-color: #ffb74d; color: black;">重试</button>
+                {{else if eq .Status "pending"}}
+                <button onclick="retryVideo(event, '{{.ID}}')" class="delete-btn" style="background-color: #4fc3f7; color: black;">优先</button>
+                {{end}}
+            </div>
+        </a>
+        {{else}}
+        <div style="text-align: center; grid-column: 1/-1;">
+            <h2>暂无视频，请先上传</h2>
+        </div>
+        {{end}}
+    </div>
+
+    <script>
+        // TV Navigation Helper
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.video-card');
+            if (cards.length > 0) {
+                cards[0].focus();
+            }
+
+            // Simple keyboard navigation for grid
+            document.addEventListener('keydown', (e) => {
+                const active = document.activeElement;
+                if (!active.classList.contains('video-card') && !active.classList.contains('upload-btn')) return;
+
+                // Enter key handling is now native to <a> tags, but we ensure it works
+                if (e.key === 'Enter') {
+                    if (active.tagName === 'A') {
+                        window.location.href = active.href;
+                    }
+                }
+            });
+        });
+
+        function refreshSeries() {
+            if(!confirm('确定要检查所有剧集更新吗？这可能需要一些时间。')) return;
+            
+            fetch('/api/refresh', {
+                method: 'POST'
+            }).then(response => {
+                if(response.ok) {
+                    alert('已开始后台刷新，新集数将陆续出现。');
+                } else {
+                    alert('刷新请求失败');
+                }
+            });
+        }
+
+        function retryVideo(e, id) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            fetch('/api/retry', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'id=' + id
+            }).then(response => {
+                if(response.ok) {
+                    // Update UI immediately to show it's pending
+                    const badge = document.getElementById('status-' + id);
+                    if (badge) {
+                        badge.textContent = 'pending';
+                        badge.className = 'status-badge pending';
+                    }
+                    // Hide retry button (simple way is reload, or remove element)
+                    // For now, reload to keep it simple and consistent
+                    window.location.reload();
+                } else {
+                    alert('重试请求失败');
+                }
+            });
+        }
+
+        function deleteVideo(e, id) {
+            e.preventDefault();
+            e.stopPropagation();
+            if(!confirm('确定要删除这个视频吗？')) return;
+            
+            fetch('/api/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'id=' + id
+            }).then(response => {
+                if(response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('删除失败');
+                }
+            });
+        }
+
+        function updateProgress(id, downloaded, total) {
+            const container = document.getElementById('progress-container-' + id);
+            const fill = document.getElementById('progress-' + id);
+            const text = document.getElementById('progress-text-' + id);
+            
+            if (container && fill && text && total > 0) {
+                const pct = Math.round((downloaded / total) * 100);
+                fill.style.width = pct + '%';
+                text.textContent = pct + '% (' + downloaded + '/' + total + ')';
+                container.style.display = 'block';
+            }
+        }
+
+        // Initialize progress bars
+        document.querySelectorAll('.progress-container').forEach(el => {
+             const down = parseInt(el.dataset.downloaded) || 0;
+             const total = parseInt(el.dataset.total) || 1;
+             const id = el.id.replace('progress-container-', '');
+             updateProgress(id, down, total);
+        });
+
+        // SSE connection
+        const evtSource = new EventSource("/api/progress");
+        evtSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            // data: {video_id, downloaded, total, status}
+            
+            updateProgress(data.video_id, data.downloaded, data.total);
+            
+            // Update status badge
+            const badge = document.getElementById('status-' + data.video_id);
+            if (badge) {
+                badge.textContent = data.status;
+                badge.className = 'status-badge ' + data.status;
+            }
+
+            // Hide progress if completed
+            if (data.status === 'completed') {
+                const container = document.getElementById('progress-container-' + data.video_id);
+                if (container) {
+                    // container.style.display = 'none'; // Optional: hide when done
+                    // Or keep it at 100%
+                    updateProgress(data.video_id, data.total, data.total);
+                }
+            }
+        };
+    </script>
+</body>
+</html>

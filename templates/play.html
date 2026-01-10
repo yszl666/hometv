@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+</head>
+<body>
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <a href="{{.Path}}" style="font-size: 2rem; padding: 20px;">点击播放: {{.Title}}</a>
+    </div>
+    <script>
+        // Auto click/redirect? Or just let user click. User said "put url on a tag".
+        // Maybe auto redirect is better for TV?
+        // Let's stick to simple link as requested.
+        
+        // Add basic key handler to go back
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === 'Backspace' || e.keyCode === 10009 || e.key === 'BrowserBack') {
+                e.preventDefault();
+                window.location.href = '/';
+            }
+        });
+        
+        // Auto focus the link
+        document.querySelector('a').focus();
+    </script>
+</body>
+</html>

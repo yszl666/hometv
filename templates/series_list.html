@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Home TV - 系列列表</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* TV Adaptation for Series List */
+        .video-grid {
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+        }
+        .video-thumbnail {
+            height: 220px; /* Taller for series cover */
+        }
+        
+        @media (min-width: 1280px) {
+            .video-grid {
+                grid-template-columns: repeat(6, 1fr) !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <!-- <a href="/upload" class="upload-btn" tabindex="1">上传视频</a> -->
+        <a href="/crawler" class="upload-btn" style="background-color: #03dac6; color: black;" tabindex="2">爬虫</a>
+        <button onclick="refreshSeries()" class="upload-btn" style="background-color: #bb86fc; color: black; border: none; cursor: pointer;" tabindex="3">刷新全部</button>
+    </div>
+    
+    <h1>视频系列 <span style="font-size: 1rem; color: #aaa; margin-left: 10px;">(已占用: {{.TotalSize}})</span></h1>
+    
+    <div class="video-grid">
+        {{range .Series}}
+        <a href="/?series={{.Name}}" class="video-card" tabindex="0">
+            <div class="video-thumbnail">
+                <video src="{{.CoverPath}}" preload="metadata"></video>
+            </div>
+            <div class="video-info">
+                <h2>{{.Name}}</h2>
+                <p>{{.Count}} 个视频</p>
+                <p>更新于: {{.UpdatedAt.Format "2006-01-02"}}</p>
+                <div style="margin-bottom: 10px;">
+                    <button onclick="setStartEpisode(event, '{{.Name}}', {{.StartEpisode}})" class="delete-btn" style="background-color: #03dac6; color: black; margin-right: 5px;">起始: {{.StartEpisode}}</button>
+                    <button onclick="deleteSeries(event, '{{.Name}}')" class="delete-btn">删除</button>
+                </div>
+                <button onclick="refreshSingleSeries(event, '{{.Name}}')" class="delete-btn" style="background-color: #bb86fc; width: 100%;">刷新剧集</button>
+            </div>
+        </a>
+        {{else}}
+        <div style="text-align: center; grid-column: 1/-1;">
+            <h2>暂无视频，请先上传</h2>
+        </div>
+        {{end}}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.video-card');
+            if (cards.length > 0) cards[0].focus();
+        });
+
+        function deleteSeries(e, name) {
+            e.preventDefault();
+            e.stopPropagation();
+            if(!confirm('确定要删除整部 "' + name + '" 吗？\n所有剧集将被永久删除！')) return;
+            
+            fetch('/api/delete_series', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'series=' + encodeURIComponent(name)
+            }).then(response => {
+                if(response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('删除失败');
+                }
+            });
+        }
+
+        function refreshSeries() {
+            if(!confirm('确定要检查所有剧集更新吗？这可能需要一些时间。')) return;
+            
+            fetch('/api/refresh', {
+                method: 'POST'
+            }).then(response => {
+                if(response.ok) {
+                    alert('已开始后台刷新，新集数将陆续出现。');
+                } else {
+                    alert('刷新请求失败');
+                }
+            });
+        }
+
+        function refreshSingleSeries(e, name) {
+            e.preventDefault();
+            e.stopPropagation();
+            // No confirmation needed for single series refresh, maybe? Or keep it simple.
+            // Let's ask to be safe.
+            if(!confirm('刷新剧集 "' + name + '"?')) return;
+            
+            fetch('/api/refresh?series=' + encodeURIComponent(name), {
+                method: 'POST'
+            }).then(response => {
+                if(response.ok) {
+                    alert('已开始刷新 "' + name + '"，新集数将陆续出现。');
+                } else {
+                    // Check text
+                    response.text().then(text => {
+                         if (text.includes("not found")) {
+                             alert('刷新失败: 未找到该剧集的源地址。如果是旧数据，请尝试重新爬取一次以保存源地址。');
+                         } else {
+                             alert('刷新请求失败');
+                         }
+                    });
+                }
+            });
+        }
+
+        function setStartEpisode(e, name, current) {
+            e.preventDefault();
+            e.stopPropagation();
+            const input = prompt('设置 "' + name + '" 的起始集数 (爬虫将跳过小于此集数的视频):', current);
+            if (input === null) return;
+            
+            const num = parseInt(input);
+            if (isNaN(num) || num < 1) {
+                alert('请输入有效的数字');
+                return;
+            }
+            
+            fetch('/api/update_series_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'series=' + encodeURIComponent(name) + '&start_episode=' + num
+            }).then(response => {
+                if(response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('设置失败');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
