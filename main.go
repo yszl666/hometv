@@ -382,8 +382,13 @@ func (s *Store) MarkSegmentWatched(videoID, segmentName string) error {
 			video.IsWatched = true
 			video.Status = "watched" // Update status to indicate it's done and files are gone
 			
-			// Trigger cleanup in background (but we are in lock, so spawn goroutine)
-			go s.cleanupVideoFiles(video.ID, video.Path)
+			// Trigger cleanup in background with delay
+			// User might still be watching the end, so wait 5 minutes
+			go func(vid, vpath string) {
+				log.Printf("Scheduling cleanup for %s in 5 minutes...", vid)
+				time.Sleep(5 * time.Minute)
+				s.cleanupVideoFiles(vid, vpath)
+			}(video.ID, video.Path)
 			
 			// Save immediately
 			return s.saveNoLock()
