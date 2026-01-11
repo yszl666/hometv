@@ -53,6 +53,31 @@ h1 {
     border-radius: 8px;
     margin-bottom: 15px;
     overflow: hidden;
+    position: relative;
+}
+
+.episode-badge-thumb {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: rgba(187, 134, 252, 0.9);
+    color: black;
+    padding: 4px 8px;
+    border-bottom-left-radius: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    z-index: 5;
+}
+
+.episode-tag {
+    display: inline-block;
+    background-color: #bb86fc;
+    color: black;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-right: 8px;
+    vertical-align: middle;
 }
 
 .video-thumbnail video {

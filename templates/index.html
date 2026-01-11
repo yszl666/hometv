@@ -61,10 +61,17 @@
         {{range .Videos}}
         <a href="/play?id={{.ID}}" class="video-card" tabindex="0">
             <div class="video-thumbnail">
+                {{$ep := episodeNum .Title}}
+                {{if gt $ep 0}}
+                <div class="episode-badge-thumb">{{printf "%02d" $ep}}</div>
+                {{end}}
                 <video src="{{.Path}}" preload="metadata"></video>
             </div>
             <div class="video-info">
-                <h2>{{.Title}}</h2>
+                <h2>
+                    {{if gt $ep 0}}<span class="episode-tag">{{printf "%02d" $ep}}</span>{{end}}
+                    {{.Title}}
+                </h2>
                 <p>
                     <span class="status-badge {{.Status}}" id="status-{{.ID}}">{{.Status}}</span>
                     {{.CreatedAt.Format "2006-01-02 15:04"}}

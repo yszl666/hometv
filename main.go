@@ -563,7 +563,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			return seriesVideos[i].CreatedAt.Before(seriesVideos[j].CreatedAt)
 		})
 
-		tmpl, err := template.ParseFiles("templates/index.html")
+		funcMap := template.FuncMap{
+			"episodeNum": extractEpisodeNumber,
+		}
+
+		tmpl, err := template.New("index.html").Funcs(funcMap).ParseFiles("templates/index.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
